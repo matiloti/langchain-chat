@@ -1,5 +1,4 @@
-import { KeyboardEvent, useState } from 'react';
-import './output.css';
+import { KeyboardEvent, useEffect, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
 type Message = {
@@ -14,6 +13,7 @@ function App() {
   const [ messages, setMessages ] = useState<Message[]>([])
   const [ message, setMessage ] = useState<string>("");
   const [ isLoading, setIsLoading ] = useState<boolean>(false);
+  const [ count, setCount ] = useState<number>(0);
 
   const handleSend = async (messageToSend: string) => {
     // Add user message to chat
@@ -65,27 +65,53 @@ function App() {
           handleSend(message);
         }
       }
-  }
+  }  
+  
+  useEffect(() => {
+    // setInterval returns a NodeJS.Timeout in TS
+    const interval = setInterval(() => {
+      setCount(prev => (prev + 1) > 360 ? 0 : (prev + 1));
+    }, 50); // 1 millisecond
+
+    // cleanup on unmount
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className='flex flex-col items-center bg-linear-to-br from-blue-300 to-red-300 p-5 h-svh '>
-      <div className='flex mb-3 lg:min-w-200 md:min-w-190 sm:min-w-full min-w-full'>
-        <div className='flex-5 bg-gray-50 drop-shadow-xl rounded-md mr-3'>
+    <div className='flex flex-col items-center bg-linear-to-br from-blue-300 to-red-300 p-5 md:h-svh h-400'>
+      <div className='flex mb-3 flex-col md:flex-row lg:max-w-200 md:max-w-190 sm:max-w-full max-w-full'>
+        <div className='relative md:flex-5 w-full mb-3 md:mb-0 md:w-auto drop-shadow-xl mr-3'>
+          <div className='h-full w-full absolute bg-black opacity-20 rounded-md'/>
           <div className='p-5'>
-            <span className='block font-bold text-yellow-600 italic text-2xl'>Hello! ✨</span>
-            <span className='block'>I'm  <span className='font-bold'>Matias</span>, and I've done this little chat app to practice creating a fullstack app with agents.</span>
-            <span className='block'>It's simple but the agent has internet access, so you can chat with it and ask for online info.</span>
-            <span className='block'>Emojis make it seems like I vibecoded it but I did not if you see the code repo is all spaguetti AI would do much better.</span>
+            <span className='relative block font-bold text-yellow-300 italic text-2xl'>Hello! ✨</span>
+            <span className='block h-5'/>
+            <span className='text-white relative block'>I'm <span className='font-bold'>Matias</span>, and I've done this little chat app to practice creating a fullstack app with AI agents (LangChain).</span>
+            <span className='block h-5'/>
+            <span className='text-white relative block'>It's simple but the agent has internet access, so you can chat with it and ask for online info.</span>
+            <span className='block h-5'/>
+            <span className='text-white relative block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaguetti. AI would do much better. Sadly.</span>
           </div>
         </div>
-        <div className='flex-2 drop-shadow-xl rounded-md bg-blue-50'>
-          <div className='p-5'>
-            <div className='font-bold text-center'>Tech Stack 💪</div>
+        <div className='md:flex-2 md:h-auto h-50 w-full md:w-auto drop-shadow-xl rounded-md'>
+          <div className='w-full absolute h-full bg-linear-to-br from-yellow-300 to-yellow-600 opacity-15 z-0 rounded-md'></div>
+          <div className='p-5 h-full'>
+            <div className='font-bold text-center font-mono border-b '>Tech Stack 💪</div>
+            <div className='flex flex-1 h-full flex-col items-center '>
+              <div className='flex flex-1 h-full items-center gap-5'>
+                <img src="langchain.png" className='relative size-10'/>
+                <img src="logo512.png" className={('relative size-10 ') + (" rotate-[" + count + "deg]")}/>
+              </div>
+              <div className='flex flex-1 items-center gap-5'>
+                <img src="python-logo.png" className='relative size-10'/>
+                <img src="typescript_logo.png" className='relative size-10'/>
+                <img src="tailwind_logo.png" className='relative size-10'/>
+              </div>
             </div>
+          </div>
         </div>
       </div>
       <div className='flex flex-col flex-1 justify-end lg:min-w-200 md:min-w-190 sm:min-w-full min-w-full bg-gray-50 drop-shadow-xl rounded-md min-h-0'>
-        <div className='overflow-y-auto flex flex-col'>
+        <div className='overflow-y-auto flex flex-col pt-5'>
         {
           messages.map(msg => (
             <div className={
@@ -114,7 +140,7 @@ function App() {
             className='bg-gray-300 rounded-md opacity-70 p-2 w-20 text-center drop-shadow-md hover:opacity-90 hover:cursor-pointer'
             onClick={() => {setMessages([]); setIsLoading(false);}}
           >
-            Clear
+            Reset
           </div>
         </div>
       </div>
