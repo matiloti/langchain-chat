@@ -1,10 +1,13 @@
 from langchain.agents import create_agent
+from langchain_openai import ChatOpenAI
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.messages import HumanMessage, AIMessage
 from langchain_community.tools import BraveSearch
-from langchain.agents.middleware import ToolRetryMiddleware
+from langchain.agents.middleware import ToolRetryMiddleware, wrap_tool_call
+from langgraph.checkpoint.memory import InMemorySaver
 
 app = FastAPI()
 
@@ -17,8 +20,13 @@ class Message(BaseModel):
 class Request(BaseModel):
     messages: list[Message]
 
+model = ChatOpenAI(
+    model="glm-4.7-flash",
+    base_url="http://localhost:1234/v1"
+)
+
 agent = create_agent(
-    "gpt-5-nano",
+    model=model,
     tools=[brave_tool],
     middleware=[
         ToolRetryMiddleware(
@@ -42,7 +50,8 @@ agent = create_agent(
         The search tool may fail sometimes. Its ok, just keep trying until it succeeds.
 
         IMPORTANT: SHORT ANSWERS.
-    """
+    """,
+    checkpointer=InMemorySaver()
 )
 
 app.add_middleware(
@@ -60,3 +69,16 @@ def chat(req: Request):
     return {"success": True, "message": agent.invoke(
         {"messages": [(HumanMessage(m.content) if m.role == "user" else AIMessage(m.content)) for m in req.messages]}
     )["messages"][-1].text}
+
+@app.get("/api/chat/stream")
+def stream(prompt: str):
+    async def generate():
+        for token, metadata in agent.stream(
+            {"messages": [{"role": "user", "content": prompt}]},
+            {"configurable": {"thread_id": "1"}},
+            stream_mode="messages",
+        ):
+            if metadata['langgraph_node'] == 'model' and len(token.content_blocks) > 0 and token.content_blocks[0]['type'] == 'text':
+                yield f"data: {token.content_blocks[0]['text']}\n\n"
+        yield "data: [DONE]\n\n"
+    return StreamingResponse(generate(), media_type="text/event-stream")
