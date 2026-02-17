@@ -15,6 +15,12 @@ function AppStreaming() {
   const [ isLoading, setIsLoading ] = useState<boolean>(false);
   const [ count, setCount ] = useState<number>(0);
 
+  const handleReset = async () => {
+    setMessages([]); 
+    setIsLoading(false);
+    await fetch(`${API_URL}/api/chat/stream/reset`)
+  }
+
   const handleSend = async (messageToSend: string) => {
     // Add user message to chat
     setMessages(prev => (
@@ -50,6 +56,15 @@ function AppStreaming() {
               const streamingMessage = prev[prev.length - 1];
               return ([...prev.slice(0, -1), {role: streamingMessage.role, content: streamingMessage.content+data}])
             });
+          } else if(part.startsWith('tool: ')) {
+              const data = part.slice(6);
+              setMessages((prev) => {
+                return ([
+                  ...prev[prev.length-1].content.length > 0 ? prev : prev.slice(0, -1), 
+                  {role: "assistant", content: data}, 
+                  {content: "", role: "assistant"}
+                ])
+              });
           }
         }
       }
@@ -119,7 +134,7 @@ function AppStreaming() {
       <div className='flex flex-col flex-1 justify-end lg:min-w-200 md:min-w-190 sm:min-w-full min-w-full bg-gray-50 drop-shadow-xl rounded-md min-h-0'>
         <div className='overflow-y-auto flex flex-col pt-5'>
         {
-          messages.map(msg => (
+          messages.filter(m => m.content.length > 0).map(msg => (
             <div className={
               (
                 (msg.role === "user") ? "bg-linear-to-br from-green-200 to-green-300 self-end " 
@@ -144,7 +159,7 @@ function AppStreaming() {
           </div>
           <div 
             className='bg-gray-300 rounded-md opacity-70 p-2 w-20 text-center drop-shadow-md hover:opacity-90 hover:cursor-pointer'
-            onClick={() => {setMessages([]); setIsLoading(false);}}
+            onClick={handleReset}
           >
             Reset
           </div>

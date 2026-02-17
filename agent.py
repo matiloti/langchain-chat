@@ -8,6 +8,8 @@ from langchain.messages import HumanMessage, AIMessage
 from langchain_community.tools import BraveSearch
 from langchain.agents.middleware import ToolRetryMiddleware, wrap_tool_call
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.config import get_stream_writer  
+
 
 app = FastAPI()
 
@@ -21,20 +23,32 @@ class Request(BaseModel):
     messages: list[Message]
 
 model = ChatOpenAI(
-    model="glm-4.7-flash",
-    base_url="http://localhost:1234/v1"
+    model="gemma-3n-e4b",
+    base_url="http://localhost:1234/v1",
+    reasoning={"effort": "low"}
 )
+
+@wrap_tool_call
+def handle_tool_call(request, handler):
+    """Handle tool execution notifications to client."""
+    writer = get_stream_writer()      
+    if request.tool_call['name'] == 'brave_search':
+        writer(f"Searching using Brave...")
+    else:
+        writer(f"Searching using tool '{request.tool_call['name']}'...")
+    return handler(request)
 
 agent = create_agent(
     model=model,
     tools=[brave_tool],
     middleware=[
         ToolRetryMiddleware(
-            max_retries=100,
+            max_retries=3,
             backoff_factor=2.0,
             initial_delay=1.0,
             max_delay=1
         ),
+        handle_tool_call
     ],
     system_prompt="""
         You are a helpful assistant.
@@ -47,7 +61,7 @@ agent = create_agent(
 
         Be direct and concise. Do not ask questions, just answer the user.
 
-        The search tool may fail sometimes. Its ok, just keep trying until it succeeds.
+        The search tool may fail sometimes. Its ok, just keep trying until it succeeds, CRITICAL: DONT ENTER INTO AN INFINITE LOOP.
 
         IMPORTANT: SHORT ANSWERS.
     """,
@@ -73,12 +87,50 @@ def chat(req: Request):
 @app.get("/api/chat/stream")
 def stream(prompt: str):
     async def generate():
-        for token, metadata in agent.stream(
+        for stream_mode, chunk in agent.stream(
             {"messages": [{"role": "user", "content": prompt}]},
             {"configurable": {"thread_id": "1"}},
-            stream_mode="messages",
+            stream_mode=["messages", "custom"],
         ):
-            if metadata['langgraph_node'] == 'model' and len(token.content_blocks) > 0 and token.content_blocks[0]['type'] == 'text':
-                yield f"data: {token.content_blocks[0]['text']}\n\n"
+            if stream_mode == 'messages':
+                token, metadata = chunk
+                if metadata['langgraph_node'] == 'model' and len(token.content_blocks) > 0 and token.content_blocks[0]['type'] == 'text':
+                    yield f"data: {token.content_blocks[0]['text']}\n\n"
+            elif stream_mode == 'custom':
+                yield f"tool: {chunk}\n\n"
         yield "data: [DONE]\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.get("/api/chat/stream/reset")
+def reset():
+    global agent 
+    agent = create_agent(
+    model=model,
+    tools=[brave_tool],
+    middleware=[
+        ToolRetryMiddleware(
+            max_retries=3,
+            backoff_factor=2.0,
+            initial_delay=1.0,
+            max_delay=1
+        ),
+        handle_tool_call
+    ],
+    system_prompt="""
+        You are a helpful assistant.
+
+        User may ask questions that require web search. In those cases, use the provided brave search tool.
+
+        Don't overcomplicate user queries. Simplify.
+
+        If user asks plainly "for the weather", get temperature in Celsius, rain probability, and humidity.
+
+        Be direct and concise. Do not ask questions, just answer the user.
+
+        The search tool may fail sometimes. Its ok, just keep trying until it succeeds, CRITICAL: DONT ENTER INTO AN INFINITE LOOP.
+
+        IMPORTANT: SHORT ANSWERS.
+    """,
+    checkpointer=InMemorySaver()
+)
