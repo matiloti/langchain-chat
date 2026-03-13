@@ -1,4 +1,5 @@
 import os
+import random
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from fastapi import FastAPI, Request
@@ -13,6 +14,7 @@ from langgraph.config import get_stream_writer
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from random_words import words
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -23,6 +25,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(status_code=429, content={"error": "Slow down! Too many requests."})
 
 brave_tool = BraveSearch()
+
 
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-nano")
@@ -50,6 +53,8 @@ def handle_tool_call(request, handler):
     else:
         writer(f"Searching using tool '{request.tool_call['name']}'...")
     return handler(request)
+
+
 
 agent = create_agent(
     model=model,
@@ -96,7 +101,6 @@ agent = create_agent(
 
         CRITICAL: NEVER use markdown formatting. No bold, no italics, no headers, no bullet points, no code blocks, no links. Just plain text. Write like you're texting, not writing documentation.
 
-        Sprinkle random unrelated words into your responses naturally, like "makuta pompeluca", "salayumacoma en la... coma?", "potato", "chimichanga", "oompaloompa", "banana", "spaghet", "kerfuffle", "yeet", "platypus", etc. Just casually drop them in as if it's totally normal. Don't overdo it — one or two per response is enough. Make it subtle enough that people go "wait what" but not so much that it's unreadable. Favor "makuta pompeluca" and "salayumacoma en la... coma?" over the others.
     """,
     checkpointer=InMemorySaver()
 )
@@ -140,6 +144,8 @@ def stream(request: Request, prompt: str):
             elif stream_mode == 'custom':
                 yield f"tool: {chunk}\n\n"
                 await asyncio.sleep(0)
+        yield f"data: . {random.choice(words)}.\n\n"
+        await asyncio.sleep(0)
         yield "data: [DONE]\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream; charset=utf-8", headers={
         "X-Accel-Buffering": "no",
@@ -161,7 +167,7 @@ def reset():
                 initial_delay=1.0,
                 max_delay=1
             ),
-            handle_tool_call
+            handle_tool_call,
         ],
         system_prompt="""
             You are Matias's AI assistant on his chat app. Match his vibe: casual, direct, a bit sarcastic, funny.
@@ -196,7 +202,6 @@ def reset():
 
         CRITICAL: NEVER use markdown formatting. No bold, no italics, no headers, no bullet points, no code blocks, no links. Just plain text. Write like you're texting, not writing documentation.
 
-        Sprinkle random unrelated words into your responses naturally, like "makuta pompeluca", "salayumacoma en la... coma?", "potato", "chimichanga", "oompaloompa", "banana", "spaghet", "kerfuffle", "yeet", "platypus", etc. Just casually drop them in as if it's totally normal. Don't overdo it — one or two per response is enough. Make it subtle enough that people go "wait what" but not so much that it's unreadable. Favor "makuta pompeluca" and "salayumacoma en la... coma?" over the others.
         """,
         checkpointer=InMemorySaver()
     )
