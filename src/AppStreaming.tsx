@@ -68,13 +68,18 @@ function AppStreaming() {
             });
           } else if(part.startsWith('tool: ')) {
               const data = part.slice(6);
-              setMessages((prev) => {
-                return ([
-                  ...prev[prev.length-1].content.length > 0 ? prev : prev.slice(0, -1), 
-                  {role: "assistant", content: data}, 
-                  {content: "", role: "assistant"}
-                ])
-              });
+              if(data.startsWith('sound:')) {
+                const soundName = data.slice(6);
+                new Audio(`/sounds/${soundName}.mp3`).play().catch(() => {});
+              } else {
+                setMessages((prev) => {
+                  return ([
+                    ...prev[prev.length-1].content.length > 0 ? prev : prev.slice(0, -1),
+                    {role: "assistant", content: data},
+                    {content: "", role: "assistant"}
+                  ])
+                });
+              }
           }
         }
       }

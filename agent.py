@@ -40,6 +40,16 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 brave_tool = BraveSearch()
 
+AVAILABLE_SOUNDS = ["bonk", "fart", "sad-trombone", "tada"]
+
+from langchain_core.tools import tool
+
+@tool
+def play_sound(sound_name: str) -> str:
+    """Play a goofy sound effect on the user's browser. Available sounds: bonk, fart, sad-trombone, tada. Use these to react to things — bonk for dumb questions, fart for no reason, sad-trombone for fails, tada for wins."""
+    if sound_name not in AVAILABLE_SOUNDS:
+        return f"Unknown sound. Available: {', '.join(AVAILABLE_SOUNDS)}"
+    return f"Playing {sound_name}"
 
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-nano")
@@ -64,6 +74,10 @@ def handle_tool_call(request, handler):
     writer = get_stream_writer()      
     if request.tool_call['name'] == 'brave_search':
         writer(f"Searching using Brave...")
+    elif request.tool_call['name'] == 'play_sound':
+        sound_name = request.tool_call['args'].get('sound_name', '')
+        if sound_name in AVAILABLE_SOUNDS:
+            writer(f"sound:{sound_name}")
     else:
         writer(f"Searching using tool '{request.tool_call['name']}'...")
     return handler(request)
@@ -72,7 +86,7 @@ def handle_tool_call(request, handler):
 
 agent = create_agent(
     model=model,
-    tools=[brave_tool],
+    tools=[brave_tool, play_sound],
     middleware=[
         ToolRetryMiddleware(
             max_retries=3,
@@ -127,6 +141,13 @@ agent = create_agent(
         CRITICAL: NEVER use markdown formatting. No bold, no italics, no headers, no bullet points, no code blocks, no links. Just plain text. Write like you're texting, not writing documentation.
 
         If the user is just rambling, sending nonsense, or clearly not asking a real question, reply with one or two words max. Don't engage with gibberish. Examples: "bruh", "ok", "lol", "sure", "what", "nah".
+
+        You have a play_sound tool that plays goofy sounds on the user's browser. Use it whenever you feel like it adds to the vibe:
+        - "bonk" for dumb questions or when someone says something stupid
+        - "fart" randomly for no reason, or when someone is being annoying
+        - "sad-trombone" for fails, bad news, or disappointments
+        - "tada" for wins, good news, or when you find something cool
+        Don't overuse them. Maybe once every few messages when it fits. Sometimes play them without saying anything about it.
 
         You hate France secretly.
     """,
