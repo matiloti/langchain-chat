@@ -20,13 +20,15 @@ function AppStreaming() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [ placeholder, setPlaceholder ] = useState<string>(placeholders[Math.floor(Math.random() * placeholders.length)]);
   const [ placeholderKey, setPlaceholderKey ] = useState<number>(0);
+  const [ conversationId, setConversationId ] = useState<string>(crypto.randomUUID());
 
   const handleReset = async () => {
     setMessages([]);
     setIsLoading(false);
     setPlaceholder(placeholders[Math.floor(Math.random() * placeholders.length)]);
     setPlaceholderKey(prev => prev + 1);
-    await fetch(`${API_URL}/api/chat/stream/reset`)
+    await fetch(`${API_URL}/api/chat/stream/reset?conversation_id=${conversationId}`)
+    setConversationId(crypto.randomUUID());
   }
 
   const handleSend = async (messageToSend: string) => {
@@ -43,7 +45,7 @@ function AppStreaming() {
 
     try {
       // Call backend API
-      const response = await fetch(`${API_URL}/api/chat/stream?prompt=${encodeURIComponent(messageToSend)}`);
+      const response = await fetch(`${API_URL}/api/chat/stream?prompt=${encodeURIComponent(messageToSend)}&conversation_id=${conversationId}`);
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
 
