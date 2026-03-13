@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+*.wav
+*.mp3
+.env
+clone-voice*.py
+voice.py

@@ -1,3 +1,4 @@
+import os
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from fastapi import FastAPI
@@ -8,12 +9,16 @@ from langchain.messages import HumanMessage, AIMessage
 from langchain_community.tools import BraveSearch
 from langchain.agents.middleware import ToolRetryMiddleware, wrap_tool_call
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.config import get_stream_writer  
+from langgraph.config import get_stream_writer
 
 
 app = FastAPI()
 
 brave_tool = BraveSearch()
+
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-nano")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 
 class Message(BaseModel):
     role: str
@@ -23,8 +28,8 @@ class Request(BaseModel):
     messages: list[Message]
 
 model = ChatOpenAI(
-    model="gemma-3n-e4b",
-    base_url="http://localhost:1234/v1",
+    model=LLM_MODEL,
+    base_url=LLM_BASE_URL,
     reasoning={"effort": "low"}
 )
 
@@ -68,9 +73,13 @@ agent = create_agent(
     checkpointer=InMemorySaver()
 )
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # frontend origin
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,6 +96,7 @@ def chat(req: Request):
 @app.get("/api/chat/stream")
 def stream(prompt: str):
     async def generate():
+        import asyncio
         for stream_mode, chunk in agent.stream(
             {"messages": [{"role": "user", "content": prompt}]},
             {"configurable": {"thread_id": "1"}},
@@ -96,41 +106,47 @@ def stream(prompt: str):
                 token, metadata = chunk
                 if metadata['langgraph_node'] == 'model' and len(token.content_blocks) > 0 and token.content_blocks[0]['type'] == 'text':
                     yield f"data: {token.content_blocks[0]['text']}\n\n"
+                    await asyncio.sleep(0)
             elif stream_mode == 'custom':
                 yield f"tool: {chunk}\n\n"
+                await asyncio.sleep(0)
         yield "data: [DONE]\n\n"
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    return StreamingResponse(generate(), media_type="text/event-stream; charset=utf-8", headers={
+        "X-Accel-Buffering": "no",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+    })
 
 
 @app.get("/api/chat/stream/reset")
 def reset():
     global agent 
     agent = create_agent(
-    model=model,
-    tools=[brave_tool],
-    middleware=[
-        ToolRetryMiddleware(
-            max_retries=3,
-            backoff_factor=2.0,
-            initial_delay=1.0,
-            max_delay=1
-        ),
-        handle_tool_call
-    ],
-    system_prompt="""
-        You are a helpful assistant.
+        model=model,
+        tools=[brave_tool],
+        middleware=[
+            ToolRetryMiddleware(
+                max_retries=3,
+                backoff_factor=2.0,
+                initial_delay=1.0,
+                max_delay=1
+            ),
+            handle_tool_call
+        ],
+        system_prompt="""
+            You are a helpful assistant.
 
-        User may ask questions that require web search. In those cases, use the provided brave search tool.
+            User may ask questions that require web search. In those cases, use the provided brave search tool.
 
-        Don't overcomplicate user queries. Simplify.
+            Don't overcomplicate user queries. Simplify.
 
-        If user asks plainly "for the weather", get temperature in Celsius, rain probability, and humidity.
+            If user asks plainly "for the weather", get temperature in Celsius, rain probability, and humidity.
 
-        Be direct and concise. Do not ask questions, just answer the user.
+            Be direct and concise. Do not ask questions, just answer the user.
 
-        The search tool may fail sometimes. Its ok, just keep trying until it succeeds, CRITICAL: DONT ENTER INTO AN INFINITE LOOP.
+            The search tool may fail sometimes. Its ok, just keep trying until it succeeds, CRITICAL: DONT ENTER INTO AN INFINITE LOOP.
 
-        IMPORTANT: SHORT ANSWERS.
-    """,
-    checkpointer=InMemorySaver()
-)
+            IMPORTANT: SHORT ANSWERS.
+        """,
+        checkpointer=InMemorySaver()
+    )
