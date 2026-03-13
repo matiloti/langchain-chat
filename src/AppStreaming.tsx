@@ -1,6 +1,7 @@
-import { KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { IoInformationCircleOutline, IoSend } from 'react-icons/io5';
+import placeholders from './placeholders';
 
 type Message = {
   content: string,
@@ -17,6 +18,7 @@ function AppStreaming() {
   const [ count, setCount ] = useState<number>(0);
   const [ showInfo, setShowInfo ] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const placeholder = useMemo(() => placeholders[Math.floor(Math.random() * placeholders.length)], []);
 
   const handleReset = async () => {
     setMessages([]); 
@@ -170,7 +172,7 @@ function AppStreaming() {
       <div className='flex flex-col flex-1 justify-end w-full lg:max-w-200 md:max-w-190 bg-gray-50 drop-shadow-xl rounded-md min-h-0'>
         <div className='overflow-y-auto flex flex-col pt-5 h-full'>
         {
-          !messages || messages.length == 0 ? <div className='self-center flex-1 flex items-center justify-center text-gray-400'>No messages yet 🏃</div> : messages.filter(m => m.content.length > 0).map(msg => (
+          !messages || messages.length == 0 ? <div className='self-center flex-1 flex items-center justify-center text-gray-400 italic'>{placeholder}</div> : messages.filter(m => m.content.length > 0).map(msg => (
             <div className={
               (
                 (msg.role === "user") ? "bg-linear-to-br from-green-200 to-green-300 self-end " 

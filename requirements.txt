@@ -7,3 +7,4 @@ langgraph==1.0.8
 langgraph-checkpoint==4.0.0
 pydantic==2.12.5
 python-dotenv==1.2.1
+slowapi==0.1.9
