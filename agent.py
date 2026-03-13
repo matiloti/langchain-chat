@@ -1,8 +1,8 @@
 import os
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.messages import HumanMessage, AIMessage
@@ -10,9 +10,17 @@ from langchain_community.tools import BraveSearch
 from langchain.agents.middleware import ToolRetryMiddleware, wrap_tool_call
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.config import get_stream_writer
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"error": "Slow down! Too many requests."})
 
 brave_tool = BraveSearch()
 
@@ -24,7 +32,7 @@ class Message(BaseModel):
     role: str
     content: str
 
-class Request(BaseModel):
+class ChatRequest(BaseModel):
     messages: list[Message]
 
 model = ChatOpenAI(
@@ -87,14 +95,16 @@ app.add_middleware(
 
 # run: uvicorn agent:app --reload
 @app.post("/api/chat")
-def chat(req: Request):
+@limiter.limit("10/minute")
+def chat(request: Request, req: ChatRequest):
     print(req.messages)
     return {"success": True, "message": agent.invoke(
         {"messages": [(HumanMessage(m.content) if m.role == "user" else AIMessage(m.content)) for m in req.messages]}
     )["messages"][-1].text}
 
 @app.get("/api/chat/stream")
-def stream(prompt: str):
+@limiter.limit("10/minute")
+def stream(request: Request, prompt: str):
     async def generate():
         import asyncio
         for stream_mode, chunk in agent.stream(
