@@ -133,7 +133,7 @@ function AppStreaming() {
             <span className='block h-5'/>
             <span className='text-white relative block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaghetti. AI would do much better. Sadly.</span>
             <span className='block h-5'/>
-            <span className='text-gray-400 relative block text-xs italic'>psst... try asking the agent to play you a sound</span>
+            <span className='text-gray-400 relative block text-xs italic'>psst... try asking the agent to play you a sound. Enchilada.</span>
           </div>
         </div>
         <div className='md:flex-2 md:h-auto h-50 w-full md:w-auto drop-shadow-xl rounded-md'>
@@ -168,7 +168,7 @@ function AppStreaming() {
               <span className='block h-5'/>
               <span className='text-white block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaghetti. AI would do much better. Sadly.</span>
               <span className='block h-5'/>
-              <span className='text-gray-400 block text-xs italic'>psst... try asking the agent to play you a sound</span>
+              <span className='text-gray-400 block text-xs italic'>psst... try asking the agent to play you a sound. Enchilada.</span>
             </div>
             <div className='bg-amber-600 rounded-b-md p-5'>
               <div className='font-bold text-center font-mono text-white'>Tech Stack 💪</div>
