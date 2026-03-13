@@ -117,7 +117,9 @@ function AppStreaming() {
             <span className='block h-5'/>
             <span className='text-white relative block'>It's simple but the agent has internet access, so you can chat with it and ask for online info.</span>
             <span className='block h-5'/>
-            <span className='text-white relative block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaguetti. AI would do much better. Sadly.</span>
+            <span className='text-white relative block'>The whole thing runs on AWS — Fargate, NLB, CloudFront, S3, the works. Took me longer to fix SSE streaming through TLS than to write the actual app.</span>
+            <span className='block h-5'/>
+            <span className='text-white relative block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaghetti. AI would do much better. Sadly.</span>
           </div>
         </div>
         <div className='md:flex-2 md:h-auto h-50 w-full md:w-auto drop-shadow-xl rounded-md'>
@@ -140,30 +142,26 @@ function AppStreaming() {
       </div>
       {showInfo && (
         <div className='md:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50' onClick={() => setShowInfo(false)}>
-          <div className='mx-4 max-h-[80vh] overflow-y-auto rounded-md' onClick={(e) => e.stopPropagation()}>
-            <div className='relative drop-shadow-xl rounded-t-md'>
-              <div className='h-full w-full absolute bg-black opacity-80 rounded-t-md'/>
-              <div className='p-5'>
-                <span className='relative block font-bold text-yellow-300 italic text-2xl'>Hello! ✨</span>
-                <span className='block h-5'/>
-                <span className='text-white relative block'>I'm <span className='font-bold'>Matias</span>, and I've done this little chat app to practice creating a fullstack app with AI agents (LangChain).</span>
-                <span className='block h-5'/>
-                <span className='text-white relative block'>It's simple but the agent has internet access, so you can chat with it and ask for online info.</span>
-                <span className='block h-5'/>
-                <span className='text-white relative block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaguetti. AI would do much better. Sadly.</span>
-              </div>
+          <div className='mx-4 max-h-[80vh] overflow-y-auto rounded-md drop-shadow-xl' onClick={(e) => e.stopPropagation()}>
+            <div className='bg-gray-900 rounded-t-md p-5'>
+              <span className='block font-bold text-amber-500 italic text-2xl'>Hello! ✨</span>
+              <span className='block h-5'/>
+              <span className='text-white block'>I'm <span className='font-bold'>Matias</span>, and I've done this little chat app to practice creating a fullstack app with AI agents (LangChain).</span>
+              <span className='block h-5'/>
+              <span className='text-white block'>It's simple but the agent has internet access, so you can chat with it and ask for online info.</span>
+              <span className='block h-5'/>
+              <span className='text-white block'>The whole thing runs on AWS — Fargate, NLB, CloudFront, S3, the works. Took me longer to fix SSE streaming through TLS than to write the actual app.</span>
+              <span className='block h-5'/>
+              <span className='text-white block'>Emojis make it seems like I vibecoded it but <b>I did not</b>. If you see <a href="https://github.com/matiloti/langchain-chat" target='blank' className='underline text-blue-300'>the code repo</a> is all spaghetti. AI would do much better. Sadly.</span>
             </div>
-            <div className='relative drop-shadow-xl rounded-b-md'>
-              <div className='w-full absolute h-full bg-linear-to-br from-yellow-300 to-yellow-600 opacity-80 z-0 rounded-b-md'></div>
-              <div className='p-5'>
-                <div className='font-bold text-center font-mono border-b'>Tech Stack 💪</div>
-                <div className='flex items-center justify-center gap-5 py-3'>
-                  <img src="langchain.png" className='relative size-10'/>
-                  <img src="logo512.png" className='relative size-10'/>
-                  <img src="python-logo.png" className='relative size-10'/>
-                  <img src="typescript_logo.png" className='relative size-10'/>
-                  <img src="tailwind_logo.png" className='relative size-10'/>
-                </div>
+            <div className='bg-amber-600 rounded-b-md p-5'>
+              <div className='font-bold text-center font-mono text-white'>Tech Stack 💪</div>
+              <div className='flex items-center justify-center gap-5 py-3'>
+                <img src="langchain.png" className='size-10'/>
+                <img src="logo512.png" className='size-10'/>
+                <img src="python-logo.png" className='size-10'/>
+                <img src="typescript_logo.png" className='size-10'/>
+                <img src="tailwind_logo.png" className='size-10'/>
               </div>
             </div>
           </div>
@@ -184,6 +182,12 @@ function AppStreaming() {
         <div ref={messagesEndRef} />
         </div>
         <div className='flex justify-between items-center mb-3 md:mb-5 mx-3 md:mx-7'>
+          <div
+            className='md:hidden p-2 text-gray-900 hover:text-amber-800 hover:cursor-pointer mr-2 flex items-center justify-center'
+            onClick={() => setShowInfo(true)}
+          >
+            {IoInformationCircleOutline({ size: 24 })}
+          </div>
           <div className={'flex flex-1 justify-between items-center  min-h-10 drop-shadow-sm rounded-md px-5 py-1 mr-2 outline-none transition-all ease-in-out duration-500  '+ (isLoading ? " bg-gray-100 cursor-wait" : " bg-white")}>
             <TextareaAutosize
               minRows={1}
@@ -201,12 +205,6 @@ function AppStreaming() {
             >
               {IoSend({ size: 18 })}
             </div>
-          </div>
-          <div
-            className='md:hidden bg-blue-300 rounded-md opacity-70 p-2 drop-shadow-md hover:opacity-90 hover:cursor-pointer mr-2 flex items-center justify-center'
-            onClick={() => setShowInfo(true)}
-          >
-            {IoInformationCircleOutline({ size: 20 })}
           </div>
           <div
             className='bg-gray-300 rounded-md opacity-70 p-2 w-20 text-center drop-shadow-md hover:opacity-90 hover:cursor-pointer'
