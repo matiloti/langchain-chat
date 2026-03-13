@@ -111,7 +111,7 @@ function AppStreaming() {
     // setInterval returns a NodeJS.Timeout in TS
     const interval = setInterval(() => {
       setCount(prev => (prev + 1) > 360 ? 0 : (prev + 1));
-    }, 50); // 1 millisecond
+    }, 50); // 1 millisecond 
 
     // cleanup on unmount
     return () => clearInterval(interval);
